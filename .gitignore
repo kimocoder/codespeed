@@ -2,6 +2,9 @@
 *.db
 sample_project/repos/*
 speed_python/repos/*
+speed_python/sitestatic/*
+speed_python/secret_key
 override
 build
 dist
+*.egg-info
