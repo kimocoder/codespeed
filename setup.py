@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='codespeed',
-    version='0.10.0',
+    version='0.10.0+pythonspeed',
     author='Miquel Torres',
     author_email='tobami@gmail.com',
     url='https://github.com/tobami/codespeed',
@@ -10,7 +10,7 @@ setup(
     license='GNU Lesser General Public License version 2.1',
     keywords=["benchmarking", "visualization"],
     install_requires=['django>=1.4,<1.7', 'isodate==0.4.8', 'south<=2.0'],
-    packages=find_packages(exclude=['ez_setup', 'sample_project']),
+    packages=find_packages(exclude=['ez_setup', 'sample_project', 'speed_python']),
     description='A web application to monitor and analyze the performance of your code',
     include_package_data=True,
     zip_safe=False,
