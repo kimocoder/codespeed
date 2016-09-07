@@ -1,4 +1,7 @@
 *.pyc
+*.swp
+*.swo
+.DS_Store
 *.db
 sample_project/repos/*
 speed_python/repos/*
@@ -7,4 +10,5 @@ speed_python/secret_key
 override
 build
 dist
-*.egg-info
+codespeed.egg-info/
+

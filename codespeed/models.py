@@ -6,12 +6,14 @@ import json
 
 from django.core.exceptions import ValidationError
 from django.core.urlresolvers import reverse
-from django.db import models
 from django.conf import settings
+from django.db import models
+from django.utils.encoding import python_2_unicode_compatible
 
 from .commits.github import GITHUB_URL_RE
 
 
+@python_2_unicode_compatible
 class Project(models.Model):
     NO_LOGS = 'N'
     GIT = 'G'
@@ -38,7 +40,7 @@ class Project(models.Model):
                                            blank=True, max_length=200)
     track = models.BooleanField("Track changes", default=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     @property
@@ -71,11 +73,12 @@ class Project(models.Model):
         super(Project, self).save(*args, **kwargs)
 
 
+@python_2_unicode_compatible
 class Branch(models.Model):
     name = models.CharField(max_length=20)
     project = models.ForeignKey(Project, related_name="branches")
 
-    def __unicode__(self):
+    def __str__(self):
         return self.project.name + ":" + self.name
 
     class Meta:
@@ -83,6 +86,7 @@ class Branch(models.Model):
         verbose_name_plural = "branches"
 
 
+@python_2_unicode_compatible
 class Revision(models.Model):
     # git and mercurial's SHA-1 length is 40
     commitid = models.CharField(max_length=42)
@@ -100,7 +104,7 @@ class Revision(models.Model):
     def get_browsing_url(self):
         return self.branch.project.commit_browsing_url.format(**self.__dict__)
 
-    def __unicode__(self):
+    def __str__(self):
         if self.date is None:
             date = None
         else:
@@ -123,6 +127,7 @@ class Revision(models.Model):
                 raise ValidationError("Invalid SVN commit id %s" % self.commitid)
 
 
+@python_2_unicode_compatible
 class Executable(models.Model):
     name = models.CharField(max_length=30)
     description = models.CharField(max_length=200, blank=True)
@@ -131,14 +136,19 @@ class Executable(models.Model):
     class Meta:
         unique_together = ('name', 'project')
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
+@python_2_unicode_compatible
 class Benchmark(models.Model):
     B_TYPES = (
         ('C', 'Cross-project'),
         ('O', 'Own-project'),
+    )
+    D_TYPES = (
+        ('U', 'Mean'),
+        ('M', 'Median'),
     )
 
     name = models.CharField(unique=True, max_length=100)
@@ -147,6 +157,7 @@ class Benchmark(models.Model):
         help_text="allows to group benchmarks in hierarchies",
         null=True, blank=True, default=None)
     benchmark_type = models.CharField(max_length=1, choices=B_TYPES, default='C')
+    data_type = models.CharField(max_length=1, choices=D_TYPES, default='U')
     description = models.CharField(max_length=300, blank=True)
     units_title = models.CharField(max_length=30, default='Time')
     units = models.CharField(max_length=20, default='seconds')
@@ -154,7 +165,7 @@ class Benchmark(models.Model):
     default_on_comparison = models.BooleanField(
         "Default on comparison page", default=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
     def clean(self):
@@ -164,6 +175,7 @@ class Benchmark(models.Model):
                                   "'default_on_comparison' first.")
 
 
+@python_2_unicode_compatible
 class Environment(models.Model):
     name = models.CharField(unique=True, max_length=100)
     cpu = models.CharField(max_length=100, blank=True)
@@ -171,28 +183,32 @@ class Environment(models.Model):
     os = models.CharField(max_length=100, blank=True)
     kernel = models.CharField(max_length=100, blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return self.name
 
 
+@python_2_unicode_compatible
 class Result(models.Model):
     value = models.FloatField()
     std_dev = models.FloatField(blank=True, null=True)
     val_min = models.FloatField(blank=True, null=True)
     val_max = models.FloatField(blank=True, null=True)
+    q1 = models.FloatField(blank=True, null=True)
+    q3 = models.FloatField(blank=True, null=True)
     date = models.DateTimeField(blank=True, null=True)
     revision = models.ForeignKey(Revision, related_name="results")
     executable = models.ForeignKey(Executable, related_name="results")
     benchmark = models.ForeignKey(Benchmark, related_name="results")
     environment = models.ForeignKey(Environment, related_name="results")
 
-    def __unicode__(self):
+    def __str__(self):
         return u"%s: %s" % (self.benchmark.name, self.value)
 
     class Meta:
         unique_together = ("revision", "executable", "benchmark", "environment")
 
 
+@python_2_unicode_compatible
 class Report(models.Model):
     revision = models.ForeignKey(Revision, related_name="reports")
     environment = models.ForeignKey(Environment, related_name="reports")
@@ -201,7 +217,7 @@ class Report(models.Model):
     colorcode = models.CharField(max_length=10, default="none")
     _tablecache = models.TextField(blank=True)
 
-    def __unicode__(self):
+    def __str__(self):
         return u"Report for %s" % self.revision
 
     class Meta:
@@ -313,8 +329,8 @@ class Report(models.Model):
 
         super(Report, self).save(*args, **kwargs)
 
-    def updown(self,val):
-        #Substitute plus/minus with up/down
+    def updown(self, val):
+        """Substitutes plus/minus with up/down"""
         direction = val >= 0 and "up" or "down"
         aval = abs(val)
         if aval == float("inf"):
@@ -327,8 +343,8 @@ class Report(models.Model):
             return True
         elif color == "red" and abs(val) > abs(current_val):
             return True
-        elif (color == "green" and current_color != "red"
-              and abs(val) > abs(current_val)):
+        elif (color == "green" and current_color != "red" and
+                abs(val) > abs(current_val)):
             return True
         else:
             return False
@@ -386,7 +402,8 @@ class Report(models.Model):
         )
 
         tablelist = []
-        for units_title in Benchmark.objects.all().values_list('units_title', flat=True).distinct():
+        for units_title in Benchmark.objects.all().values_list(
+                'units_title', flat=True).distinct():
             currentlist = []
             units = ""
             hasmin = False

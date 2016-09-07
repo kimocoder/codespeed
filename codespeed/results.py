@@ -88,7 +88,7 @@ def save_result(data):
         if p.repo_type not in ("N", ""):
             try:
                 commit_logs = commits.get_logs(rev, rev, update=True)
-            except CommitLogError as e:
+            except commits.exceptions.CommitLogError as e:
                 logger.warning("unable to save revision %s info: %s", rev, e,
                                exc_info=True)
             else:
@@ -122,6 +122,8 @@ def save_result(data):
     r.std_dev = data.get('std_dev')
     r.val_min = data.get('min')
     r.val_max = data.get('max')
+    r.q1 = data.get('q1')
+    r.q3 = data.get('q3')
 
     r.full_clean()
     r.save()
