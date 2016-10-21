@@ -72,14 +72,15 @@ def save_result(data):
         b.full_clean()
         b.save()
 
+    commit_id = data['commitid']
     try:
-        rev = branch.revisions.get(commitid=data['commitid'])
+        rev = branch.revisions.get(commitid=commit_id)
     except Revision.DoesNotExist:
         rev_date = data.get("revision_date")
         # "None" (as string) can happen when we urlencode the POST data
         if not rev_date or rev_date in ["", "None"]:
-            rev_date = datetime.today()
-        rev = Revision(branch=branch, project=p, commitid=data['commitid'],
+            rev_date = commits.get_commit_date(p, commit_id)
+        rev = Revision(branch=branch, project=p, commitid=commit_id,
                        date=rev_date)
         try:
             rev.full_clean()
