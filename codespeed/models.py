@@ -50,7 +50,12 @@ class Project(models.Model):
             error = 'Not supported for %s project' % self.get_repo_type_display()
             raise AttributeError(error)
 
-        return os.path.splitext(self.repo_path.split(os.sep)[-1])[0]
+        name = self.repo_path
+        if name.endswith('/'):
+            name = name[:-1]
+        name = name.split('/')[-1]
+        # strip extension
+        return name.rsplit('.', 1)[0]
 
     @property
     def working_copy(self):
