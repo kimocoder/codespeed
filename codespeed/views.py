@@ -95,7 +95,8 @@ def gethistoricaldata(request):
     baseline_exe = Executable.objects.get(
         name=settings.DEF_BASELINE['executable'])
     baseline_revs = Revision.objects.filter(
-        branch__project=baseline_exe.project).order_by('-date')
+        branch__project=baseline_exe.project,
+        tag=settings.DEF_BASELINE['revision']).order_by('-date')
     baseline_lastrev = baseline_revs[0]
     for rev in baseline_revs:
         baseline_results = Result.objects.filter(
@@ -129,17 +130,16 @@ def gethistoricaldata(request):
     data['tagged_revs'] = [rev.tag for rev in default_taggedrevs if rev.tag in default_results]
     # Fetch data for latest results
     revs = Revision.objects.filter(
-        branch=default_branch).order_by('-date')[:5]
+        branch=default_branch).order_by('-date')[:100]
     default_lastrev = None
-    for i in range(4):
-        default_lastrev = revs[i]
+    for rev in revs:
+        default_lastrev = rev
         if default_lastrev.results.filter(executable=default_exe, environment=env):
             break
         default_lastrev = None
-    if default_lastrev is None:
-        return HttpResponse(json.dumps(data))
-    default_results['latest'] = Result.objects.filter(
-        executable=default_exe, revision=default_lastrev, environment=env)
+    if default_lastrev is not None:
+        default_results['latest'] = Result.objects.filter(
+            executable=default_exe, revision=default_lastrev, environment=env)
 
     # Collect data
     benchmarks = []
