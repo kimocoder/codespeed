@@ -86,9 +86,9 @@ STATICFILES_DIRS = (
 
 SHOW_REPORTS = False
 SHOW_HISTORICAL = True
-DEF_BASELINE = {'executable': 'cpython', 'revision': '2.6.2'}
-DEF_EXECUTABLE = 'pypy-c-jit'
-DEF_ENVIRONMENT = 'tannit'
+DEF_BASELINE = {'executable': 'cpython', 'revision': '2.7.11'}
+DEF_EXECUTABLE = 'pypy-c-jit-64'
+DEF_ENVIRONMENT = 'benchmarker'
 
 
 from .local_settings import *
