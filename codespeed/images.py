@@ -28,7 +28,7 @@ def gen_image_from_results(result_data, width, height):
     ax = fig.add_axes([.1, .15, .85, .75])
     ax.set_ylim(min_value - range_increment, max_value + range_increment)
 
-    xax = range(0, len(values))
+    xax = range(len(values))
     yax = values
 
     ax.set_xticks(xax)
@@ -65,6 +65,4 @@ def gen_image_from_results(result_data, width, height):
     canvas = FigureCanvasAgg(fig)
     buf = BytesIO()
     canvas.print_png(buf)
-    buf_data = buf.getvalue()
-
-    return buf_data
+    return buf.getvalue()

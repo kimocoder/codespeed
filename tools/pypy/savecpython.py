@@ -9,19 +9,19 @@ def save(project, revision, results, options, executable, host, testing=False):
     testparams = []
     #Parse data
     data = {}
-    current_date = datetime.today()
+    current_date = datetime.now()
 
     for b in results:
         bench_name = b[0]
         res_type = b[1]
         results = b[2]
         value = 0
-        if res_type == "SimpleComparisonResult":
-            value = results['base_time']
-        elif res_type == "ComparisonResult":
+        if res_type == "ComparisonResult":
             value = results['avg_base']
+        elif res_type == "SimpleComparisonResult":
+            value = results['base_time']
         else:
-            print("ERROR: result type unknown " + b[1])
+            print(f"ERROR: result type unknown {b[1]}")
             return 1
         data = {
             'commitid': revision,
@@ -36,8 +36,7 @@ def save(project, revision, results, options, executable, host, testing=False):
             data['std_dev'] = results['std_changed']
         if testing: testparams.append(data)
         else: send(data)
-    if testing: return testparams
-    else: return 0
+    return testparams if testing else 0
 
 def send(data):
     #save results

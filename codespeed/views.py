@@ -67,8 +67,7 @@ def getcomparisondata(request):
     benchmarks = Benchmark.objects.all()
     environments = Environment.objects.all()
 
-    compdata = {}
-    compdata['error'] = "Unknown error"
+    compdata = {'error': "Unknown error"}
     for proj in executables:
         for exe in executables[proj]:
             compdata[exe['key']] = {}
@@ -121,7 +120,7 @@ def comparison(request):
         for exe, rev in settings.COMP_EXECUTABLES:
             try:
                 exe = Executable.objects.get(name=exe)
-                key = str(exe.id) + "+"
+                key = f"{str(exe.id)}+"
                 if rev == "L":
                     key += rev
                 else:
@@ -130,9 +129,6 @@ def comparison(request):
                 key += "+default"
                 if key in exekeys:
                     checkedexecutables.append(key)
-                else:
-                    #TODO: log
-                    pass
             except Executable.DoesNotExist:
                 #TODO: log
                 pass
@@ -154,8 +150,11 @@ def comparison(request):
             benchmark_type="C"
         ).filter(units_title=unit)
         units = benchmarks[unit][0].units
-        lessisbetter = (benchmarks[unit][0].lessisbetter and
-                        ' (less is better)' or ' (more is better)')
+        lessisbetter = (
+            ' (less is better)'
+            if benchmarks[unit][0].lessisbetter
+            else ' (more is better)'
+        )
         bench_units[unit] = [
             [b.id for b in benchmarks[unit]], lessisbetter, units
         ]
@@ -205,12 +204,14 @@ def comparison(request):
         except:
             pass  # Keep "none" as default baseline
 
-    selecteddirection = False
-    if ('hor' in data and data['hor'] == "true" or
-        hasattr(settings, 'CHART_ORIENTATION') and
-            settings.CHART_ORIENTATION == 'horizontal'):
-        selecteddirection = True
-
+    selecteddirection = bool(
+        (
+            'hor' in data
+            and data['hor'] == "true"
+            or hasattr(settings, 'CHART_ORIENTATION')
+            and settings.CHART_ORIENTATION == 'horizontal'
+        )
+    )
     return render_to_response('codespeed/comparison.html', {
         'checkedexecutables': checkedexecutables,
         'checkedbenchmarks': checkedbenchmarks,
@@ -226,10 +227,7 @@ def comparison(request):
     })
 
 def get_setting(name, default = None):
-    if hasattr(settings, name):
-        return getattr(settings, name)
-    else:
-        return default
+    return getattr(settings, name) if hasattr(settings, name) else default
 
 
 @require_GET
@@ -271,11 +269,19 @@ def gettimelinedata(request):
     if next_benchmarks is not False:
         next_benchmarks = int(next_benchmarks)
 
-    resp = StreamingHttpResponse(stream_timeline(baseline_exe, baseline_rev, benchmarks, data,
-                                                 environment, executables, number_of_revs,
-                                                 next_benchmarks),
-                                 content_type='application/json')
-    return resp
+    return StreamingHttpResponse(
+        stream_timeline(
+            baseline_exe,
+            baseline_rev,
+            benchmarks,
+            data,
+            environment,
+            executables,
+            number_of_revs,
+            next_benchmarks,
+        ),
+        content_type='application/json',
+    )
 
 
 def stream_timeline(baseline_exe, baseline_rev, benchmarks, data, environment, executables,
@@ -302,24 +308,22 @@ def stream_timeline(baseline_exe, baseline_rev, benchmarks, data, environment, e
 
     if not next_benchmarks or (next_benchmarks < len(benchmarks)
                                and transmitted_benchmarks > 0):
-        next_page = ', "nextBenchmarks": ' + str(num_benchmark)
+        next_page = f', "nextBenchmarks": {str(num_benchmark)}'
     else:
         next_page = ', "nextBenchmarks": false'
 
-    if next_benchmarks:
-        not_first = ', "first": false'
-    else:
-        not_first = ', "first": true'
-
+    not_first = ', "first": false' if next_benchmarks else ', "first": true'
     if num_results['results'] == 0 and data['ben'] != 'show_none' and not next_benchmarks:
-        yield ']' + not_first + next_page + ', "error":"No data found for the selected options"}\n'
+        yield f']{not_first}{next_page}' + ', "error":"No data found for the selected options"}\n'
     else:
-        yield ']' + not_first + next_page + ', "error":"None"}\n'
+        yield f']{not_first}{next_page}' + ', "error":"None"}\n'
 
 
 def get_timeline_for_benchmark(baseline_exe, baseline_rev, bench, environment, executables,
                                number_of_revs, num_results):
-    lessisbetter = bench.lessisbetter and ' (less is better)' or ' (more is better)'
+    lessisbetter = (
+        ' (less is better)' if bench.lessisbetter else ' (more is better)'
+    )
     timeline = {
         'benchmark': bench.name,
         'benchmark_id': bench.id,
@@ -401,17 +405,13 @@ def get_timeline_for_benchmark(baseline_exe, baseline_rev, bench, environment, e
                 [str(start), baselinevalue],
                 [str(end), baselinevalue]
             ]
-    if append:
-        old_num_results = num_results['results']
-        json_str = json.dumps(timeline)
-        num_results['results'] = old_num_results + len(timeline)
-
-        if old_num_results > 0:
-            return "," + json_str
-        else:
-            return json_str
-    else:
+    if not append:
         return ""
+    old_num_results = num_results['results']
+    json_str = json.dumps(timeline)
+    num_results['results'] = old_num_results + len(timeline)
+
+    return f",{json_str}" if old_num_results > 0 else json_str
 
 
 @require_GET
@@ -502,28 +502,18 @@ def timeline(request):
         else:
             defaultbenchmark = get_object_or_404(Benchmark, name=data['ben'])
 
-    if 'equid' in data:
-        defaultequid = data['equid']
-    else:
-        defaultequid = "off"
-    if 'quarts' in data:
-        defaultquarts = data['quarts']
-    else:
-        defaultquarts = "on"
-    if 'extr' in data:
-        defaultextr = data['extr']
-    else:
-        defaultextr = "on"
-
-    # Information for template
-    if defaultbenchmark in ['grid', 'show_none']:
-        pagedesc = None
-    else:
-        pagedesc = "Results timeline for the '%s' benchmark (project %s)" % \
-            (defaultbenchmark, defaultproject)
-    executables = {}
-    for proj in Project.objects.filter(track=True):
-        executables[proj] = Executable.objects.filter(project=proj)
+    defaultequid = data['equid'] if 'equid' in data else "off"
+    defaultquarts = data['quarts'] if 'quarts' in data else "on"
+    defaultextr = data['extr'] if 'extr' in data else "on"
+    pagedesc = (
+        None
+        if defaultbenchmark in ['grid', 'show_none']
+        else f"Results timeline for the '{defaultbenchmark}' benchmark (project {defaultproject})"
+    )
+    executables = {
+        proj: Executable.objects.filter(project=proj)
+        for proj in Project.objects.filter(track=True)
+    }
     use_median_bands = hasattr(settings, 'USE_MEDIAN_BANDS') and settings.USE_MEDIAN_BANDS
     return render_to_response('codespeed/timeline.html', {
         'pagedesc': pagedesc,
@@ -603,21 +593,27 @@ def getchangestable(request):
     )
     tablelist = report.get_changes_table(trendconfig)
 
-    if not len(tablelist):
-        return HttpResponse('<table id="results" class="tablesorter" '
-                            'style="height: 232px;"></table>'
-                            '<p class="errormessage">No results for this '
-                            'parameters</p>')
-
-    return render_to_response('codespeed/changes_data.html', {
-        'tablelist': tablelist,
-        'trendconfig': trendconfig,
-        'rev': selectedrev,
-        'exe': executable,
-        'env': environment,
-        'prev': prevrev,
-        'next': nextrev,
-    })
+    return (
+        render_to_response(
+            'codespeed/changes_data.html',
+            {
+                'tablelist': tablelist,
+                'trendconfig': trendconfig,
+                'rev': selectedrev,
+                'exe': executable,
+                'env': environment,
+                'prev': prevrev,
+                'next': nextrev,
+            },
+        )
+        if len(tablelist)
+        else HttpResponse(
+            '<table id="results" class="tablesorter" '
+            'style="height: 232px;"></table>'
+            '<p class="errormessage">No results for this '
+            'parameters</p>'
+        )
+    )
 
 
 @require_GET
@@ -702,8 +698,8 @@ def changes(request):
     # belongs to another project (project changed) and then trigger the
     # repopulation of the revision selection selectbox
     projectmatrix = {}
-    for proj in executables:
-        for e in executables[proj]:
+    for value in executables.values():
+        for e in value:
             projectmatrix[e.id] = e.project.name
     projectmatrix = json.dumps(projectmatrix)
 
@@ -713,8 +709,7 @@ def changes(request):
         ]
     revisionlists = json.dumps(revisionlists)
 
-    pagedesc = "Report of %s performance changes for commit %s on branch %s" % \
-        (defaultexecutable, selectedrevision.commitid, selectedrevision.branch)
+    pagedesc = f"Report of {defaultexecutable} performance changes for commit {selectedrevision.commitid} on branch {selectedrevision.branch}"
     return render_to_response('codespeed/changes.html', {
         'pagedesc': pagedesc,
         'defaultenvironment': defaultenv,
@@ -733,10 +728,7 @@ def changes(request):
 
 @require_GET
 def reports(request):
-    context = {}
-
-    context['reports'] = \
-        Report.objects.order_by('-revision__date')[:10]
+    context = {'reports': Report.objects.order_by('-revision__date')[:10]}
 
     context['significant_reports'] = Report.objects.filter(
         colorcode__in=('red', 'green')
@@ -748,25 +740,22 @@ def reports(request):
 @require_GET
 def displaylogs(request):
     rev = get_object_or_404(Revision, pk=request.GET.get('revisionid'))
-    logs = []
-    logs.append(
+    logs = [
         {
-            'date': str(rev.date), 'author': rev.author,
-            'author_email': '', 'message': rev.message,
+            'date': str(rev.date),
+            'author': rev.author,
+            'author_email': '',
+            'message': rev.message,
             'short_commit_id': rev.get_short_commitid(),
-            'commitid': rev.commitid
+            'commitid': rev.commitid,
         }
-    )
+    ]
     error = False
     try:
         startrev = Revision.objects.filter(
             branch=rev.branch
         ).filter(date__lt=rev.date).order_by('-date')[:1]
-        if not len(startrev):
-            startrev = rev
-        else:
-            startrev = startrev[0]
-
+        startrev = startrev[0] if len(startrev) else rev
         remotelogs = commits.get_logs(rev, startrev)
         if len(remotelogs):
             try:
@@ -801,7 +790,7 @@ def displaylogs(request):
 def add_result(request):
     response, error = save_result(request.POST)
     if error:
-        logger.error("Could not save result: " + response)
+        logger.error(f"Could not save result: {response}")
         return HttpResponseBadRequest(response)
     else:
         create_report_if_enough_data(response[0], response[1], response[2])
@@ -819,9 +808,7 @@ def add_json_results(request):
     logger.info("add_json_results request with %d entries." % len(data))
 
     unique_reports = set()
-    i = 0
-    for result in data:
-        i += 1
+    for i, result in enumerate(data, start=1):
         logger.debug("add_json_results: save item %d." % i)
         response, error = save_result(result)
         if error:

@@ -14,8 +14,7 @@ class ResultFeed(Feed):
             .order_by('-revision__date')[:10]
 
     def item_title(self, item):
-        return "%s: %s" % (item.revision.get_short_commitid(),
-                           item.item_description())
+        return f"{item.revision.get_short_commitid()}: {item.item_description()}"
 
     description_template = "codespeed/changes_table.html"
 

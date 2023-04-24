@@ -23,8 +23,7 @@ def updaterepo(project, update=True):
         stdout, stderr = p.communicate()
 
         if p.returncode != 0 or stderr:
-            raise CommitLogError("hg pull returned %s: %s" % (p.returncode,
-                                                              stderr))
+            raise CommitLogError(f"hg pull returned {p.returncode}: {stderr}")
         else:
             return [{'error': False}]
     else:
@@ -38,9 +37,7 @@ def updaterepo(project, update=True):
         stdout, stderr = p.communicate()
 
         if p.returncode != 0:
-            raise CommitLogError("%s returned %s: %s" % (" ".join(cmd),
-                                                         p.returncode,
-                                                         stderr))
+            raise CommitLogError(f'{" ".join(cmd)} returned {p.returncode}: {stderr}')
         else:
             return [{'error': False}]
 
@@ -49,11 +46,13 @@ def getlogs(endrev, startrev):
     updaterepo(endrev.branch.project, update=False)
 
     cmd = [
-        "hg", "log",
-        "-r", "%s::%s" % (startrev.commitid, endrev.commitid),
+        "hg",
+        "log",
+        "-r",
+        f"{startrev.commitid}::{endrev.commitid}",
         "--template",
-        ("{rev}:{node|short}\n{node}\n{author|user}\n{author|email}"
-         "\n{date}\n{tags}\n{desc}\n=newlog=\n")
+        "{rev}:{node|short}\n{node}\n{author|user}\n{author|email}"
+        "\n{date}\n{tags}\n{desc}\n=newlog=\n",
     ]
 
     working_copy = endrev.branch.project.working_copy
@@ -62,42 +61,41 @@ def getlogs(endrev, startrev):
 
     if p.returncode != 0:
         raise CommitLogError(str(stderr))
-    else:
-        stdout = stdout.rstrip('\n')  # Remove last newline
-        logs = []
-        for log in stdout.split("=newlog=\n"):
-            elements = []
-            elements = log.split('\n')[:-1]
-            if len(elements) < 7:
-                # "Malformed" log
-                logs.append({
-                    'date': '-', 'message': 'error parsing log', 'commitid': '-'})
-            else:
-                short_commit_id = elements.pop(0)
-                commit_id = elements.pop(0)
-                author_name = elements.pop(0)
-                author_email = elements.pop(0)
-                date = elements.pop(0)
-                tag = elements.pop(0)
-                tag = "" if tag == "tip" else tag
-                # All other newlines should belong to the description text. Join.
-                message = '\n'.join(elements)
+    stdout = stdout.rstrip('\n')  # Remove last newline
+    logs = []
+    for log in stdout.split("=newlog=\n"):
+        elements = []
+        elements = log.split('\n')[:-1]
+        if len(elements) < 7:
+            # "Malformed" log
+            logs.append({
+                'date': '-', 'message': 'error parsing log', 'commitid': '-'})
+        else:
+            short_commit_id = elements.pop(0)
+            commit_id = elements.pop(0)
+            author_name = elements.pop(0)
+            author_email = elements.pop(0)
+            date = elements.pop(0)
+            tag = elements.pop(0)
+            tag = "" if tag == "tip" else tag
+            # All other newlines should belong to the description text. Join.
+            message = '\n'.join(elements)
 
-                # Parse date
-                date = date.split('-')[0]
-                date = datetime.datetime.fromtimestamp(
-                    float(date)).strftime("%Y-%m-%d %H:%M:%S")
+            # Parse date
+            date = date.split('-')[0]
+            date = datetime.datetime.fromtimestamp(
+                float(date)).strftime("%Y-%m-%d %H:%M:%S")
 
-                # Add changeset info
-                logs.append({
-                    'date': date,
-                    'author': author_name,
-                    'author_email': author_email,
-                    'message': message,
-                    'short_commit_id': short_commit_id,
-                    'commitid': commit_id,
-                    'tag': tag
-                })
+            # Add changeset info
+            logs.append({
+                'date': date,
+                'author': author_name,
+                'author_email': author_email,
+                'message': message,
+                'short_commit_id': short_commit_id,
+                'commitid': commit_id,
+                'tag': tag
+            })
     # Remove last log here because mercurial saves the short hast as commitid now
     if len(logs) > 1 and logs[-1].get('short_commit_id') == startrev.commitid:
         logs.pop()

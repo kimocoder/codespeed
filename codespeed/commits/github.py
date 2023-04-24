@@ -56,15 +56,13 @@ def fetch_json(url):
 
     if "message" in json_obj and \
        json_obj["message"] in ("Not Found", "Server Error",):
-        raise CommitLogError(
-            "Unable to load %s: %s" % (url, json_obj["message"]))
+        raise CommitLogError(f'Unable to load {url}: {json_obj["message"]}')
 
     return json_obj
 
 
 def retrieve_tag(commit_id, username, project):
-    tags_url = 'https://api.github.com/repos/%s/%s/git/refs/tags' % (
-        username, project)
+    tags_url = f'https://api.github.com/repos/{username}/{project}/git/refs/tags'
 
     tags_json = fetch_json(tags_url)
     for tag in tags_json:
@@ -73,8 +71,7 @@ def retrieve_tag(commit_id, username, project):
 
 
 def retrieve_revision(commit_id, username, project, revision=None):
-    commit_url = 'https://api.github.com/repos/%s/%s/git/commits/%s' % (
-        username, project, commit_id)
+    commit_url = f'https://api.github.com/repos/{username}/{project}/git/commits/{commit_id}'
 
     commit_json = fetch_json(commit_url)
 
@@ -94,15 +91,17 @@ def retrieve_revision(commit_id, username, project, revision=None):
         revision.full_clean()
         revision.save()
 
-    return {'date':         date,
-            'message':      commit_json['message'],
-            'body':         "",   # TODO: pretty-print diffs
-            'author':       commit_json['author']['name'],
-            'author_email': commit_json['author']['email'],
-            'commitid':     commit_json['sha'],
-            'short_commit_id': commit_json['sha'][0:7],
-            'parents':      commit_json['parents'],
-            'tag':          tag}
+    return {
+        'date': date,
+        'message': commit_json['message'],
+        'body': "",
+        'author': commit_json['author']['name'],
+        'author_email': commit_json['author']['email'],
+        'commitid': commit_json['sha'],
+        'short_commit_id': commit_json['sha'][:7],
+        'parents': commit_json['parents'],
+        'tag': tag,
+    }
 
 
 def getlogs(endrev, startrev):
@@ -119,7 +118,8 @@ def getlogs(endrev, startrev):
 
     if not m:
         raise ValueError(
-            "Unable to parse Github URL %s" % endrev.branch.project.repo_path)
+            f"Unable to parse Github URL {endrev.branch.project.repo_path}"
+        )
 
     username = m.group("username")
     project = m.group("project")

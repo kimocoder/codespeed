@@ -50,10 +50,7 @@ def save_to_speedcenter(url=None, project=None, commitid=None, executable=None,
         'executable': executable,
         'benchmark': benchmark,
         'result_value': result_value,
-    }
-
-    data.update(kwargs)
-
+    } | kwargs
     if not data.get('environment', None):
         data['environment'] = platform.platform(aliased=True)
 
@@ -67,7 +64,7 @@ def save_to_speedcenter(url=None, project=None, commitid=None, executable=None,
     if status == 202:
         logging.debug("Server %s: HTTP %s: %s", url, status, response)
     else:
-        raise IOError("Server %s returned HTTP %s" % (url, status))
+        raise IOError(f"Server {url} returned HTTP {status}")
 
 
 if __name__ == "__main__":
@@ -105,10 +102,7 @@ if __name__ == "__main__":
         parser.error("The following parameters must be provided:\n\t%s" % "\n\t".join(
             "--%s".replace("_", "-") % i for i in required))
 
-    kwargs = {}
-    for k, v in options.__dict__.items():
-        if v is not None:
-            kwargs[k] = v
+    kwargs = {k: v for k, v in options.__dict__.items() if v is not None}
     kwargs.setdefault('branch', 'default')
 
     if not kwargs['url'].endswith("/result/add/"):

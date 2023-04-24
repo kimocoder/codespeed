@@ -27,26 +27,26 @@ def get_default_environment(enviros, data, multi=False):
                 except ValueError:
                     # Not an int
                     continue
-                for env in enviros:
-                    if env_id == env.id:
-                        defaultenviros.append(env)
+                defaultenviros.extend(env for env in enviros if env_id == env.id)
             if not multi:
                 break
     # Use settings.py value
-    if not defaultenviros and not multi:
-        if (hasattr(settings, 'DEF_ENVIRONMENT') and
-                settings.DEF_ENVIRONMENT is not None):
-            for env in enviros:
-                if settings.DEF_ENVIRONMENT == env.name:
-                    defaultenviros.append(env)
-                    break
+    if (
+        not defaultenviros
+        and not multi
+        and (
+            hasattr(settings, 'DEF_ENVIRONMENT')
+            and settings.DEF_ENVIRONMENT is not None
+        )
+    ):
+        for env in enviros:
+            if settings.DEF_ENVIRONMENT == env.name:
+                defaultenviros.append(env)
+                break
     # Last fallback
     if not defaultenviros:
         defaultenviros = enviros
-    if multi:
-        return defaultenviros
-    else:
-        return defaultenviros[0]
+    return defaultenviros if multi else defaultenviros[0]
 
 
 def getbaselineexecutables():
@@ -64,9 +64,9 @@ def getbaselineexecutables():
         for exe in [e for e in executables if e.project == rev.branch.project]:
             exestring = str(exe)
             if len(exestring) > maxlen:
-                exestring = str(exe)[0:maxlen] + "..."
-            name = exestring + " " + rev.tag
-            key = str(exe.id) + "+" + str(rev.id)
+                exestring = f"{str(exe)[:maxlen]}..."
+            name = f"{exestring} {rev.tag}"
+            key = f"{str(exe.id)}+{str(rev.id)}"
             baseline.append({
                 'key': key,
                 'executable': exe,
@@ -113,10 +113,10 @@ def getcomparisonexes():
     all_executables = {}
     exekeys = []
     baselines = getbaselineexecutables()
+    maxlen = 20
     for proj in Project.objects.all():
         executables = []
         executablekeys = []
-        maxlen = 20
         # add all tagged revs for any project
         for exe in baselines:
             if exe['key'] is not "none" and exe['executable'].project == proj:
@@ -136,11 +136,11 @@ def getcomparisonexes():
                 for exe in Executable.objects.filter(project=proj):
                     exestring = str(exe)
                     if len(exestring) > maxlen:
-                        exestring = str(exe)[0:maxlen] + "..."
-                    name = exestring + " latest"
+                        exestring = f"{str(exe)[:maxlen]}..."
+                    name = f"{exestring} latest"
                     if branch.name != 'default':
-                        name += " in branch '" + branch.name + "'"
-                    key = str(exe.id) + "+L+" + branch.name
+                        name += f" in branch '{branch.name}'"
+                    key = f"{str(exe.id)}+L+{branch.name}"
                     executablekeys.append(key)
                     executables.append({
                         'key': key,
@@ -185,7 +185,7 @@ def get_benchmark_results(data):
     if len(result_query) == 0:
         raise ObjectDoesNotExist("No results were found!")
 
-    result_list = [item for item in result_query]
+    result_list = list(result_query)
     result_list.reverse()
 
     if relative_results:
@@ -247,16 +247,8 @@ def get_num_revs_and_benchmarks(data):
 
 
 def get_stats_with_defaults(res):
-    val_min = ""
-    if res.val_min is not None:
-        val_min = res.val_min
-    val_max = ""
-    if res.val_max is not None:
-        val_max = res.val_max
-    q1 = ""
-    if res.q1 is not None:
-        q1 = res.q1
-    q3 = ""
-    if res.q3 is not None:
-        q3 = res.q3
+    val_min = res.val_min if res.val_min is not None else ""
+    val_max = res.val_max if res.val_max is not None else ""
+    q1 = res.q1 if res.q1 is not None else ""
+    q3 = res.q3 if res.q3 is not None else ""
     return q1, q3, val_max, val_min

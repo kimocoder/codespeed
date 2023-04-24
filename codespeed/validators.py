@@ -18,29 +18,22 @@ def validate_results_request(data):
 
     for key in mandatory_data:
         if key not in data:
-            raise ValidationError('Key "' + key +
-                                  '" missing from GET request!')
+            raise ValidationError(f'Key "{key}" missing from GET request!')
         elif data[key] == '':
-            raise ValidationError('Value for key "' + key +
-                                  '" empty in GET request!')
-
-    integer_data = [
-            'revs',
-            'width',
-            'height'
-    ]
+            raise ValidationError(f'Value for key "{key}" empty in GET request!')
 
     """
     Check that the items in integer_data are the correct format,
     if they exist
     """
+    integer_data = ['revs', 'width', 'height']
     for key in integer_data:
         if key in data:
             try:
                 rev_value = int(data[key])
             except ValueError:
-                raise ValidationError('Value for "' + key +
-                                      '" is not an integer!')
+                raise ValidationError(f'Value for "{key}" is not an integer!')
             if rev_value <= 0:
-                raise ValidationError('Value for "' + key + '" should be a'
-                                      ' strictly positive integer!')
+                raise ValidationError(
+                    f'Value for "{key}" should be a strictly positive integer!'
+                )

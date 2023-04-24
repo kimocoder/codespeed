@@ -34,9 +34,9 @@ def validate_result(item):
     error = True
     for key in mandatory_data:
         if key not in item:
-            return 'Key "' + key + '" missing from request', error
-        elif key in item and item[key] == "":
-            return 'Value for key "' + key + '" empty in request', error
+            return f'Key "{key}" missing from request', error
+        elif item[key] == "":
+            return f'Value for key "{key}" empty in request', error
 
     # Check that the Environment exists
     try:
@@ -51,9 +51,8 @@ def save_result(data):
     res, error = validate_result(data)
     if error:
         return res, True
-    else:
-        assert(isinstance(res, Environment))
-        env = res
+    assert(isinstance(res, Environment))
+    env = res
 
     p, created = Project.objects.get_or_create(name=data["project"])
     branch, created = Branch.objects.get_or_create(name=data["branch"],
@@ -78,7 +77,7 @@ def save_result(data):
         rev_date = data.get("revision_date")
         # "None" (as string) can happen when we urlencode the POST data
         if not rev_date or rev_date in ["", "None"]:
-            rev_date = datetime.today()
+            rev_date = datetime.now()
         rev = Revision(branch=branch, project=p, commitid=data['commitid'],
                        date=rev_date)
         try:

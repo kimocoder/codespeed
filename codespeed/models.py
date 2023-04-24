@@ -51,7 +51,7 @@ class Project(models.Model):
     def repo_name(self):
         # name not defined for None, GitHub or Subversion
         if self.repo_type in ('N', 'H', 'S'):
-            error = 'Not supported for %s project' % self.get_repo_type_display()
+            error = f'Not supported for {self.get_repo_type_display()} project'
             raise AttributeError(error)
 
         return os.path.splitext(self.repo_path.split(os.sep)[-1])[0]
@@ -60,7 +60,7 @@ class Project(models.Model):
     def working_copy(self):
         # working copy exists for mercurial and git only
         if self.repo_type in ('N', 'H', 'S'):
-            error = 'Not supported for %s project' % self.get_repo_type_display()
+            error = f'Not supported for {self.get_repo_type_display()} project'
             raise AttributeError(error)
 
         return os.path.join(settings.REPOSITORY_BASE_PATH, self.repo_name)
@@ -68,8 +68,7 @@ class Project(models.Model):
     def save(self, *args, **kwargs):
         """Provide a default for commit browsing url in github repositories."""
         if not self.commit_browsing_url and self.repo_type == self.GITHUB:
-            m = GITHUB_URL_RE.match(self.repo_path)
-            if m:
+            if m := GITHUB_URL_RE.match(self.repo_path):
                 url = 'https://github.com/%s/%s/commit/{commitid}' % (
                     m.group('username'), m.group('project')
                 )
@@ -108,7 +107,7 @@ class Branch(models.Model):
     project = models.ForeignKey(Project, related_name="branches")
 
     def __str__(self):
-        return self.project.name + ":" + self.name
+        return f"{self.project.name}:{self.name}"
 
     class Meta:
         unique_together = ("name", "project")
@@ -134,13 +133,10 @@ class Revision(models.Model):
         return self.branch.project.commit_browsing_url.format(**self.__dict__)
 
     def __str__(self):
-        if self.date is None:
-            date = None
-        else:
-            date = self.date.strftime("%b %d, %H:%M")
+        date = None if self.date is None else self.date.strftime("%b %d, %H:%M")
         string = " - ".join(filter(None, (date, self.commitid, self.tag)))
         if self.branch.name != self.branch.project.default_branch:
-            string += " - " + self.branch.name
+            string += f" - {self.branch.name}"
         return string
 
     class Meta:
@@ -148,12 +144,12 @@ class Revision(models.Model):
 
     def clean(self):
         if not self.commitid or self.commitid == "None":
-            raise ValidationError("Invalid commit id %s" % self.commitid)
+            raise ValidationError(f"Invalid commit id {self.commitid}")
         if self.branch.project.repo_type == "S":
             try:
                 int(self.commitid)
             except ValueError:
-                raise ValidationError("Invalid SVN commit id %s" % self.commitid)
+                raise ValidationError(f"Invalid SVN commit id {self.commitid}")
 
 
 @python_2_unicode_compatible
@@ -231,7 +227,7 @@ class Result(models.Model):
     environment = models.ForeignKey(Environment, related_name="results")
 
     def __str__(self):
-        return u"%s: %s" % (self.benchmark.name, self.value)
+        return f"{self.benchmark.name}: {self.value}"
 
     class Meta:
         unique_together = ("revision", "executable", "benchmark", "environment")
@@ -247,7 +243,7 @@ class Report(models.Model):
     _tablecache = models.TextField(blank=True)
 
     def __str__(self):
-        return u"Report for %s" % self.revision
+        return f"Report for {self.revision}"
 
     class Meta:
         unique_together = ("revision", "executable", "environment")
@@ -352,7 +348,7 @@ class Report(models.Model):
 
     def updown(self, val):
         """Substitutes plus/minus with up/down"""
-        direction = val >= 0 and "up" or "down"
+        direction = "up" if val >= 0 else "down"
         aval = abs(val)
         if aval == float("inf"):
             return u"%s ∞%%" % direction
@@ -472,19 +468,14 @@ class Report(models.Model):
                         if c[0].value != 0:
                             change = (result - c[0].value) * 100 / c[0].value
                             totals['change'].append(result / c[0].value)
-                        elif c[0].value == 0:
-                            if result == 0:
-                                # 0/0 = 1, in our world
-                                change = 0
-                                totals['change'].append(1)
-                            else:
-                                # n/0 = ∞
-                                change = float("inf")
-                                totals['change'].append(float("inf"))
+                        elif result == 0:
+                            # 0/0 = 1, in our world
+                            change = 0
+                            totals['change'].append(1)
                         else:
-                            # no previous result, no change available
-                            pass
-
+                            # n/0 = ∞
+                            change = float("inf")
+                            totals['change'].append(float("inf"))
                 # Calculate trend:
                 # percentage change relative to average of 3 previous results
                 # Calculate past average
@@ -525,12 +516,8 @@ class Report(models.Model):
                 })
 
             # Compute Arithmetic averages
-            for key in totals.keys():
-                if len(totals[key]):
-                    totals[key] = float(sum(totals[key]) / len(totals[key]))
-                else:
-                    totals[key] = "-"
-
+            for key, value in totals.items():
+                totals[key] = float(sum(totals[key]) / len(totals[key])) if len(value) else "-"
             if totals['change'] != "-":
                 # Transform ratio to percentage
                 totals['change'] = (totals['change'] - 1) * 100
@@ -560,19 +547,16 @@ class Report(models.Model):
         return tablelist
 
     def get_absolute_url(self):
-        return reverse("changes") + "?rev=%s&exe=%s&env=%s" % (
-            self.revision.commitid, self.executable.id, self.environment.name)
+        return (
+            reverse("changes")
+            + f"?rev={self.revision.commitid}&exe={self.executable.id}&env={self.environment.name}"
+        )
 
     def item_description(self):
-        if self.summary == "":
-            return "no significant changes"
-        else:
-            return self.summary
+        return "no significant changes" if self.summary == "" else self.summary
 
     def _save_tablecache(self, data):
         self._tablecache = json.dumps(data)
 
     def _get_tablecache(self):
-        if self._tablecache == '':
-            return {}
-        return json.loads(self._tablecache)
+        return {} if self._tablecache == '' else json.loads(self._tablecache)

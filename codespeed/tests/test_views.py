@@ -17,7 +17,7 @@ class TestAddResult(TestCase):
         self.path = reverse('add-result')
         self.e = Environment.objects.create(name='Dual Core',
                                             cpu='Core 2 Duo 8200')
-        temp = datetime.today()
+        temp = datetime.now()
         self.cdate = datetime(
             temp.year, temp.month, temp.day,
             temp.hour, temp.minute, temp.second)
@@ -97,8 +97,9 @@ class TestAddResult(TestCase):
         self.data['environment'] = bad_name
         response = self.client.post(self.path, self.data)
         self.assertEquals(response.status_code, 400)
-        self.assertEquals(response.content.decode(),
-                          "Environment " + bad_name + " not found")
+        self.assertEquals(
+            response.content.decode(), f"Environment {bad_name} not found"
+        )
         self.data['environment'] = 'Dual Core'
 
     def test_empty_argument(self):
@@ -110,7 +111,8 @@ class TestAddResult(TestCase):
             self.assertEquals(response.status_code, 400)
             self.assertEquals(
                 response.content.decode(),
-                'Value for key "' + key + '" empty in request')
+                f'Value for key "{key}" empty in request',
+            )
             self.data[key] = backup
 
     def test_missing_argument(self):
@@ -121,8 +123,8 @@ class TestAddResult(TestCase):
             response = self.client.post(self.path, self.data)
             self.assertEquals(response.status_code, 400)
             self.assertEquals(
-                response.content.decode(),
-                'Key "' + key + '" missing from request')
+                response.content.decode(), f'Key "{key}" missing from request'
+            )
             self.data[key] = backup
 
     def test_report_is_not_created(self):
@@ -170,7 +172,7 @@ class TestAddJSONResults(TestCase):
         self.path = reverse('add-json-results')
         self.e = Environment(name='bigdog', cpu='Core 2 Duo 8200')
         self.e.save()
-        temp = datetime.today()
+        temp = datetime.now()
         self.cdate = datetime(
             temp.year, temp.month, temp.day, temp.hour, temp.minute,
             temp.second)
@@ -273,7 +275,8 @@ class TestAddJSONResults(TestCase):
 
         self.assertEquals(response.status_code, 400)
         self.assertEquals(
-            response.content.decode(), "Environment " + bad_name + " not found")
+            response.content.decode(), f"Environment {bad_name} not found"
+        )
         data['environment'] = 'bigdog'
 
     def test_empty_argument(self):
@@ -287,7 +290,8 @@ class TestAddJSONResults(TestCase):
             self.assertEquals(response.status_code, 400)
             self.assertEquals(
                 response.content.decode(),
-                'Value for key "' + key + '" empty in request')
+                f'Value for key "{key}" empty in request',
+            )
             data[key] = backup
 
     def test_missing_argument(self):
@@ -300,7 +304,8 @@ class TestAddJSONResults(TestCase):
                                         {'json': json.dumps(self.data)})
             self.assertEquals(response.status_code, 400)
             self.assertEquals(
-                response.content.decode(), 'Key "' + key + '" missing from request')
+                response.content.decode(), f'Key "{key}" missing from request'
+            )
             data[key] = backup
 
     def test_report_is_created(self):

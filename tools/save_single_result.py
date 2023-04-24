@@ -9,9 +9,8 @@ import urllib2
 # You need to enter the real URL and have the server running
 CODESPEED_URL = 'http://localhost:8000/'
 
-current_date = datetime.today()
+current_date = datetime.now()
 
-# Mandatory fields
 data = {
     'commitid': '14',
     'branch': 'default',  # Always use default for trunk/master/tip
@@ -20,17 +19,14 @@ data = {
     'benchmark': 'float',
     'environment': "Dual Core",
     'result_value': 4000,
-}
-
-# Optional fields
-data.update({
+} | {
     'revision_date': current_date,  # Optional. Default is taken either
-                                    # from VCS integration or from current date
+    # from VCS integration or from current date
     'result_date': current_date,  # Optional, default is current date
     'std_dev': 1.11111,  # Optional. Default is blank
     'max': 4001.6,  # Optional. Default is blank
     'min': 3995.1,  # Optional. Default is blank
-})
+}
 
 
 def add(data):

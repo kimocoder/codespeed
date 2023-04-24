@@ -13,14 +13,19 @@ def updaterepo(project):
 
 
 def get_tag(rev_num, repo_path, client):
-    tags_url = repo_path + '/tags'
+    tags_url = f'{repo_path}/tags'
     tags = client.ls(tags_url)
 
-    for tag in tags:
-        if 'created_rev' in tag and tag['created_rev'].number == rev_num:
-            if 'name' in tag:
-                return tag['name'].split('/')[-1]
-    return ''
+    return next(
+        (
+            tag['name'].split('/')[-1]
+            for tag in tags
+            if 'created_rev' in tag
+            and tag['created_rev'].number == rev_num
+            and 'name' in tag
+        ),
+        '',
+    )
 
 
 def getlogs(newrev, startrev):
@@ -54,7 +59,8 @@ def getlogs(newrev, startrev):
         raise CommitLogError(e.args)
     except ValueError:
         raise CommitLogError(
-            "'%s' is an invalid subversion revision number" % newrev.commitid)
+            f"'{newrev.commitid}' is an invalid subversion revision number"
+        )
     log_messages.reverse()
     s = len(log_messages)
     while s > loglimit:
